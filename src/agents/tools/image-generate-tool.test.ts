@@ -406,8 +406,8 @@ describe("createImageGenerateTool", () => {
     // These fixtures cover routing and limits; the native suite proves actual resource ownership.
     vi.spyOn(
       mediaGenerationToolProviders,
-      "acquireImageGenerationToolProviders",
-    ).mockImplementation(async ({ cfg }) => ({
+      "acquireMediaGenerationToolProviders",
+    ).mockImplementation(async (_key, { cfg }) => ({
       providers: imageGenerationRuntime.listRuntimeImageGenerationProviders({ config: cfg }),
       assertOpen() {},
       run: async (run) => await run(),
@@ -979,7 +979,7 @@ describe("createImageGenerateTool", () => {
 
   it("does not acquire image providers when the caller aborts a pending duplicate lookup", async () => {
     const acquireProviders = vi.mocked(
-      mediaGenerationToolProviders.acquireImageGenerationToolProviders,
+      mediaGenerationToolProviders.acquireMediaGenerationToolProviders,
     );
     const lookup = createDeferred<[]>();
     taskRuntimeInternalMocks.listFreshTasksForOwnerKey.mockReturnValue(lookup.promise);
@@ -1201,7 +1201,7 @@ describe("createImageGenerateTool", () => {
 
   it("returns active status for a duplicate image request with the same prompt", async () => {
     const acquireProviders = vi.mocked(
-      mediaGenerationToolProviders.acquireImageGenerationToolProviders,
+      mediaGenerationToolProviders.acquireMediaGenerationToolProviders,
     );
     stubImageGenerationProviders();
     vi.stubEnv("OPENAI_API_KEY", "openai-test");
