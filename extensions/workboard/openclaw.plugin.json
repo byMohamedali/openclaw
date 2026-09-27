@@ -226,7 +226,17 @@
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
-    "properties": {}
+    "properties": {
+      "concurrentOwners": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "description": "Owners allowed to work on multiple independent cards concurrently. Other owners retain the one-active-card limit."
+      }
+    }
   },
   "controlUi": {
     "entry": "dist/control-ui/a3c523ada91c8f86d01e5f05f8ce460f90ca0b2c5786d40b8679bddf92b130f7/index.js",

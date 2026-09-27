@@ -2373,6 +2373,35 @@ describe("WorkboardStore", () => {
     });
   });
 
+  it("allows configured owners concurrent claims without bypassing card or dependency protection", async () => {
+    const store = createWorkboardSqliteTestStore({ concurrentOwners: ["parallel-worker"] });
+    const first = await store.create({ title: "First", status: "todo" });
+    const second = await store.create({ title: "Second", status: "todo" });
+    const dependent = await store.create({
+      title: "Dependent",
+      status: "todo",
+      parents: [first.id],
+    });
+
+    await store.claim(first.id, { ownerId: "parallel-worker" });
+    await expect(store.claim(second.id, { ownerId: "parallel-worker" })).resolves.toMatchObject({
+      card: { status: "running" },
+    });
+    await expect(store.claim(first.id, { ownerId: "parallel-worker" })).rejects.toThrow(
+      /already claimed/,
+    );
+    await expect(store.claim(dependent.id, { ownerId: "parallel-worker" })).rejects.toThrow(
+      /dependencies/,
+    );
+
+    const serial = await store.create({ title: "Serial", status: "todo" });
+    const serialNext = await store.create({ title: "Serial next", status: "todo" });
+    await store.claim(serial.id, { ownerId: "serial-worker" });
+    await expect(store.claim(serialNext.id, { ownerId: "serial-worker" })).rejects.toThrow(
+      /already has active/,
+    );
+  });
+
   it("claims cards, heartbeats, and releases the claim", async () => {
     const store = createWorkboardSqliteTestStore({ createStores: createKernelStores });
     const card = await store.create({ title: "Coordinate worker", status: "todo" });

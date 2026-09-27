@@ -20,6 +20,7 @@ type WorkboardSqliteTestStores = Omit<
 > & { runWithWriteAuthority?: WorkboardWriteAuthority };
 
 type WorkboardSqliteTestOptions = {
+  concurrentOwners?: readonly string[];
   createStores?: (dbPath: string) => WorkboardSqliteTestStores;
   beforeCardWrite?: (key: string, value: PersistedWorkboardCard) => void | Promise<void>;
   beforeCardLookup?: (key: string) => void | Promise<void>;
@@ -96,6 +97,7 @@ export function createWorkboardSqliteTestHarness(options: WorkboardSqliteTestOpt
   let storeCloseObserved = false;
   const store = new WorkboardStore(stores.cards, {
     ...stores,
+    concurrentOwners: options.concurrentOwners,
     close: async () => {
       storeCloseObserved = true;
       await (options.onStoreClose ?? closeDatabase)();

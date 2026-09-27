@@ -259,8 +259,21 @@ dispatch that needs writes.
 
 ### Worker selection
 
+To let an owner work on multiple independent cards, set
+`plugins.entries.workboard.config.concurrentOwners` to that owner's exact agent ID:
+
+```json5
+{ plugins: { entries: { workboard: { config: { concurrentOwners: ["parallel-worker"] } } } } }
+```
+
+The default is an empty list. Only listed owners bypass the one-active-card
+limit, for direct claims and dispatch alike. Card claims remain exclusive,
+dependencies must still finish first, and the per-pass worker-start limit and
+runtime concurrency limits still apply. Remove an owner from this list to restore
+serial admission; this does not interrupt already-running cards.
+
 Each pass starts **at most 3 workers by default**. Ready cards are ordered by
-priority, then position, then creation time. A pass starts only one card per
+priority, then position, then creation time. By default, a pass starts only one card per
 owner/agent and skips owners that already have running or review work on the
 board. Archived cards, cards with an active claim, and cards not in `ready`
 status are never selected for worker starts (they can still be affected by the
