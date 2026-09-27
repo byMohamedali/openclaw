@@ -4,6 +4,7 @@ import { registerWorkboardGatewayMethods } from "./runtime-api.js";
 import { createWorkboardAutomationNudgeService } from "./src/automation-nudge.js";
 import { createWorkboardChangeEventService } from "./src/change-events.js";
 import { registerWorkboardCommand } from "./src/command.js";
+import { readConcurrentOwners, workboardPluginConfigSchema } from "./src/config.js";
 import {
   createWorkboardLifecycleService,
   readWorkboardLifecycleSessions,
@@ -23,9 +24,11 @@ export default definePluginEntry({
   id: "workboard",
   name: "Workboard",
   description: "Dashboard workboard for agent-owned issues and sessions.",
+  configSchema: workboardPluginConfigSchema,
   register(api) {
     const store = WorkboardStore.openSqlite(
       resolveWorkboardSqliteWorkerModuleUrl(api.runtimeSource),
+      readConcurrentOwners(api.pluginConfig),
     );
     const resourceServices: Array<{ stop(): void | Promise<void> }> = [];
     registerWorkboardStoreLifecycle(api, store, async () => {

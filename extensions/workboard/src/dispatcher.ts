@@ -235,6 +235,7 @@ function selectStartableCards(
   ownerOverride: string | undefined,
   now: number,
   mode: "scheduled" | "exact",
+  allowsConcurrentOwner: (ownerId: string) => boolean,
 ): { cards: WorkboardCard[]; rejection?: WorkboardStartFailure } {
   if (limit <= 0) {
     return { cards: [] };
@@ -264,7 +265,7 @@ function selectStartableCards(
               card.status !== "todo" &&
               card.status !== "ready"
             ? `Card cannot start from ${card.status}; move it to backlog, todo, or ready first.`
-            : (runningByOwner.get(owner) ?? 0) > 0
+            : !allowsConcurrentOwner(owner) && (runningByOwner.get(owner) ?? 0) > 0
               ? `Owner ${owner} already has active Workboard work; complete or stop it before starting another card.`
               : undefined;
     if (rejection !== undefined) {
@@ -345,6 +346,7 @@ async function runWorkboardDispatch(
     ownerOverride,
     now,
     directCardId ? "exact" : "scheduled",
+    (ownerId) => params.store.allowsConcurrentOwner(ownerId),
   );
   if (selection.rejection) {
     startFailures.push(selection.rejection);
@@ -354,7 +356,7 @@ async function runWorkboardDispatch(
     if (acceptedStarts >= maxStarts || attemptedStarts >= maxAttempts) {
       break;
     }
-    if (startedOwners.has(ownerId)) {
+    if (startedOwners.has(ownerId) && !params.store.allowsConcurrentOwner(ownerId)) {
       continue;
     }
     const sessionKey = workboardSessionKeyForCard(card);

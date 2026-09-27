@@ -4,6 +4,51 @@ import { dispatchAndStartWorkboardCards } from "./dispatcher.js";
 import { createWorkboardSqliteTestStore } from "./test/sqlite-store.js";
 
 describe("dispatchAndStartWorkboardCards", () => {
+  it("starts independent cards for configured concurrent owners while retaining other limits", async () => {
+    const store = createWorkboardSqliteTestStore({ concurrentOwners: ["parallel-worker"] });
+    for (const agentId of ["parallel-worker", "serial-worker"]) {
+      const active = await store.create({ title: "Active", status: "todo", agentId });
+      await store.claim(active.id, { ownerId: agentId });
+    }
+    const first = await store.create({
+      title: "First",
+      status: "ready",
+      agentId: "parallel-worker",
+    });
+    const second = await store.create({
+      title: "Second",
+      status: "ready",
+      agentId: "parallel-worker",
+    });
+    const serial = await store.create({
+      title: "Serial",
+      status: "ready",
+      agentId: "serial-worker",
+    });
+    const run = vi.fn().mockResolvedValue({ runId: "run-parallel" });
+
+    const result = await dispatchAndStartWorkboardCards({ store, subagent: { run } });
+
+    expect(result.started.map((entry) => entry.cardId)).toEqual([first.id, second.id]);
+    expect(result.startFailures).toEqual([]);
+    await expect(store.get(serial.id)).resolves.toMatchObject({ status: "ready" });
+    const repeated = await dispatchAndStartWorkboardCards({ store, subagent: { run } });
+    expect(repeated.started).toEqual([]);
+    expect(run).toHaveBeenCalledTimes(2);
+    const exact = await store.create({
+      title: "Exact",
+      status: "todo",
+      agentId: "parallel-worker",
+    });
+    const direct = await dispatchAndStartWorkboardCards({
+      store,
+      subagent: { run },
+      options: { cardId: exact.id },
+    });
+    expect(direct.started.map((entry) => entry.cardId)).toEqual([exact.id]);
+    expect(direct.startFailures).toEqual([]);
+  });
+
   it("persists the resolved subagent runtime on new executions", async () => {
     const store = createWorkboardSqliteTestStore();
     const card = await store.create({

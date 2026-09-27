@@ -2,6 +2,7 @@
 import type { WorkboardCard } from "@openclaw/workboard-contract";
 import type { OpenClawPluginApi } from "../api.js";
 import { redactClaimToken } from "./card-redaction.js";
+import { readConcurrentOwners } from "./config.js";
 import {
   assertNoCursorAdvance,
   createWorkboardDispatchHandler,
@@ -45,7 +46,10 @@ export function registerWorkboardGatewayMethods(params: {
   const { api: hostApi } = params;
   const store =
     params.store ??
-    WorkboardStore.openSqlite(resolveWorkboardSqliteWorkerModuleUrl(hostApi.runtimeSource));
+    WorkboardStore.openSqlite(
+      resolveWorkboardSqliteWorkerModuleUrl(hostApi.runtimeSource),
+      readConcurrentOwners(hostApi.pluginConfig),
+    );
   if (!params.store) {
     registerWorkboardStoreLifecycle(hostApi, store);
   }

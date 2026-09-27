@@ -670,8 +670,8 @@ export class WorkboardStore extends WorkboardNotificationStore {
     );
   }
 
-  static openSqlite(workerModuleUrl: URL) {
+  static openSqlite(workerModuleUrl: URL, concurrentOwners: readonly string[] = []) {
     const stores = createWorkboardSqliteStores({ workerModuleUrl });
-    return new WorkboardStore(stores.cards, stores);
+    return new WorkboardStore(stores.cards, { ...stores, concurrentOwners });
   }
 }

@@ -89,6 +89,7 @@ export class WorkboardCoreStore extends WorkboardStoreRuntime {
   protected readonly boardStore: WorkboardKeyedStore<PersistedWorkboardBoard>;
   protected readonly subscriptionStore: WorkboardSubscriptionStore;
   protected readonly attachmentStore: WorkboardKeyedStore<PersistedWorkboardAttachment>;
+  private readonly concurrentOwners: ReadonlySet<string>;
 
   constructor(
     store: WorkboardCardStore,
@@ -100,16 +101,22 @@ export class WorkboardCoreStore extends WorkboardStoreRuntime {
       dataVersion?: () => number | Promise<number>;
       close?: () => void | Promise<void>;
       runWithWriteAuthority?: WorkboardWriteAuthority;
+      concurrentOwners?: readonly string[];
     },
   ) {
     super(stores.dataVersion, stores.close, stores.ready, stores.runWithWriteAuthority);
     this.store = this.trackCardStore(store);
+    this.concurrentOwners = new Set(stores.concurrentOwners);
     this.boardStore = this.track(stores.boards);
     this.subscriptionStore = {
       ...this.track(stores.subscriptions, { notifyChanges: false }),
       entries: (options) => this.runOperation(() => stores.subscriptions.entries(options)),
     };
     this.attachmentStore = this.track(stores.attachments, { notifyChanges: false });
+  }
+
+  allowsConcurrentOwner(ownerId: string): boolean {
+    return this.concurrentOwners.has(ownerId);
   }
 
   protected async withCardCompensation<T>(run: () => Promise<T>): Promise<T> {
@@ -845,7 +852,7 @@ export class WorkboardCoreStore extends WorkboardStoreRuntime {
       delete next.metadata;
     }
     const expectedUpdatedAt = options.expectedUpdatedAt ?? existing.updatedAt;
-    if (options.ownerSlot) {
+    if (options.ownerSlot && !this.allowsConcurrentOwner(options.ownerSlot.ownerId)) {
       const result = await this.store.claimIfOwnerAvailable(
         next.id,
         { version: 1, card: next },
